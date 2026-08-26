@@ -1,0 +1,38 @@
+# --- Secrets ---
+.env
+*.token
+github_token.txt
+
+# --- Data (never commit raw or processed datasets) ---
+data/raw/*
+data/processed/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+
+# --- Trained models / large outputs (kept out of git; regenerate via scripts) ---
+outputs/models/*
+!outputs/models/.gitkeep
+outputs/reports/*.html
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ipynb_checkpoints/
+
+# --- Virtual environments ---
+venv/
+.venv/
+env/
+
+# --- OS / editor ---
+.DS_Store
+.vscode/
+.idea/
+
+# --- Web ---
+web/node_modules/
+web/dist/

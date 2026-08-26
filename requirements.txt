@@ -1,0 +1,27 @@
+# AutoDeploy AI — pinned dependencies (tested on Python 3.9.6)
+# Install with: pip install -r requirements.txt
+
+# --- Data & modeling ---
+numpy==1.26.4
+pandas==2.2.2
+scikit-learn==1.5.1
+xgboost==2.1.1
+shap==0.46.0
+joblib==1.4.2
+
+# --- Plotting (EDA / evaluation figures) ---
+matplotlib==3.9.1
+seaborn==0.13.2
+
+# --- Data acquisition (GitHub Actions API fallback) ---
+requests==2.32.3
+python-dotenv==1.0.1
+tqdm==4.66.5
+
+# --- API service ---
+fastapi==0.112.0
+uvicorn[standard]==0.30.5
+pydantic==2.8.2
+
+# --- Testing ---
+pytest==8.3.2
