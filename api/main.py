@@ -1,12 +1,14 @@
 """
-AutoDeploy AI — Stage 3, Layer 1: prediction API.
+AutoDeploy AI — Stage 3, Layer 1/1b: prediction API.
 
 A minimal FastAPI service wrapping the Stage 2 model. Two endpoints:
 
-  GET  /health   - is the model loaded, and what does it expect as input.
-  POST /predict  - given one build's feature vector, return the predicted
-                   failure probability, a risk tier, and the SHAP-ranked
-                   top contributing features for that specific prediction.
+  GET  /health   - is the model loaded, what does it expect as input, and
+                   how does cold-start routing behave.
+  POST /predict  - given one build's feature vector, return either the
+                   predicted failure probability + risk tier + SHAP-ranked
+                   top contributors, OR the cold_start state when this repo
+                   has no prior build history (Layer 1b).
 
 No database, no auth beyond what's needed later for the GitHub Action
 (handled in Layer 3). Run with:
@@ -48,11 +50,19 @@ def health():
         model_path=str(service.model_path),
         detail=None if service.is_loaded else service.load_error,
         feature_schema=service.feature_schema(),
+        cold_start_behavior=service.cold_start_behavior(),
     )
 
 
 @app.post("/predict", response_model=PredictionResponse)
 def predict(features: BuildFeatures):
+    """Score one build.
+
+    Returns HTTP 200 in two shapes: a normal tiered prediction, or the
+    cold-start state (`status="cold_start"`, `risk_tier=null`) when this
+    repo has no prior build history. cold_start is a valid answer, not an
+    error — see api/schema.py for the rule and the reasoning.
+    """
     try:
         result = service.predict(features)
     except ModelNotLoadedError as exc:

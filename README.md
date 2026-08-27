@@ -8,9 +8,11 @@ This is a scoped, defensible demo, not a production system. See
 [Out of scope](#out-of-scope--future-work) for what was deliberately left out.
 
 > **Status: Stage 3 in progress.** Stages 1–2 complete (data, features,
-> model, SHAP). Stage 3 Layer 1 (prediction API) built and tested; Layers 2
-> (live feature extractor) and 3 (GitHub Action) not yet built. Stage 4
-> (web UI) not started. Real numbers below, not projections.
+> model, SHAP). Stage 3 Layer 1 (prediction API) built and tested, plus
+> Layer 1b (explicit cold-start handling — see
+> [Cold start](#cold-start-the-honest-version)). Layers 2 (live feature
+> extractor) and 3 (GitHub Action) not yet built. Stage 4 (web UI) not
+> started. Real numbers below, not projections.
 
 ## Architecture: train → extract → serve → annotate
 
@@ -27,9 +29,10 @@ web/           single-page UI that calls the API (Stage 4)
    baselines, explained with SHAP. Offline, one-time (rerun to retrain).
 2. **Extract** (Stage 3, Layer 2, in progress) — given a live repo + commit,
    pull the same 31 features from the GitHub API, causally (no future data).
-3. **Serve** (`api/`, Stage 3 Layer 1, done) — FastAPI wraps the trained
-   model: `POST /predict` returns failure probability, risk tier, and the
-   SHAP-ranked features driving that specific prediction.
+3. **Serve** (`api/`, Stage 3 Layers 1 + 1b, done) — FastAPI wraps the
+   trained model: `POST /predict` returns failure probability, risk tier, and
+   the SHAP-ranked features driving that specific prediction — or a
+   `cold_start` state, with no tier, when the repo has no build history yet.
 4. **Annotate** (Stage 3, Layer 3, planned) — a GitHub Action that runs the
    extractor + API on every push/PR and posts the result as a commit status
    and PR comment, in plain language.
@@ -72,13 +75,13 @@ so results are reproducible run to run.
   python scripts/05_train_and_evaluate.py # trains HistGradientBoostingClassifier, saves outputs/models/*.joblib
   python scripts/06_shap_analysis.py      # SHAP interpretation of the temporally-trained model
   ```
-- **Stage 3, Layer 1 (prediction API):**
+- **Stage 3, Layers 1 + 1b (prediction API, cold-start handling):**
   ```bash
   uvicorn api.main:app --reload   # requires outputs/models/hgb_split_temporal.joblib to already exist
   pytest tests/test_api.py -v
   ```
-  See [api/README.md](api/README.md) for the endpoints and a notable finding
-  about cold-start predictions.
+  See [api/README.md](api/README.md) for the endpoints and the cold-start
+  rule.
 - **Stage 3, Layers 2–3 (extractor, GitHub Action):** _not yet built_
 - **Stage 4 (web UI):** _not yet built_
 
@@ -156,10 +159,53 @@ Full ranking and a flagged counterintuitive finding (larger teams predict
 
 This same finding shows up again at the API layer, not just in SHAP: a
 synthetic "first build ever, all history null" test vector against the live
-API returned **0.706 — High risk** (see [api/README.md](api/README.md)).
-Layer 3's GitHub Action will need an explicit cold-start caveat in its own
-README section for exactly this reason — not written yet, since Layer 3
-isn't built.
+API returned **0.706 — High risk**. See
+[Cold start: the honest version](#cold-start-the-honest-version) below —
+this one is load-bearing enough to have changed the API's behavior.
+
+## Cold start: the honest version
+
+**Without special handling, this tool over-flags essentially every new repo
+as High risk until build history accrues.** Not "leans on weaker features
+early" — over-flags. A brand-new repo, which is exactly the case where
+someone would most want a build-failure predictor, gets a red flag on its
+first clean commit.
+
+The mechanism is unavoidable given what the model learned. In training,
+`previous_build_status=null` almost always meant "first build of a young,
+churning, not-yet-stable project", and those projects did fail more often —
+so null was genuinely predictive, and the model learned *null itself* as a
+failure signal (+1.35 SHAP on the test vector, its strongest single
+driver). At serve time null also means "established, healthy repo where
+someone just installed this tool." The model cannot tell those apart. Same
+null, two opposite real-world situations, one learned response: flag it.
+Textbook train-serve skew, caught before shipping.
+
+**The fix (Stage 3, Layer 1b): an explicit `cold_start` state.** When a repo
+has no prior build history, `/predict` does not return a risk tier at all.
+It returns `status: "cold_start"` with a plain-language message, the raw
+probability clearly labelled low-confidence rather than dressed as a tier,
+and the top drivers among the features that *do* have values. The trigger is
+the two project-history features specifically — a new *contributor* to an
+established repo still gets a normal tier, because project history (the
+dominant 65.8% signal block) is intact in that case. Full rule, the
+two-groups reasoning, and both response shapes:
+[api/README.md](api/README.md#cold-start-handling-layer-1b).
+
+**What was rejected:** imputing null history to a neutral prior or the
+global base rate. That's the cheap fix and it's the dishonest one — it hides
+the uncertainty by pretending a new repo has average history, and moves the
+miscalibration somewhere less visible. Nulls stay null.
+
+**Planned upgrade:** a dedicated **history-free model** for cold-start
+repos, trained only on the transferable change/process features and routed
+behind this same `cold_start` check. Its expected performance is
+approximately the held-out-projects number already measured in Stage 2,
+**~0.69 PR-AUC** — versus 0.804 for the history-using model on the temporal
+split. That's the honest trade: a calibrated-but-weaker prediction in place
+of no tier at all. SHAP showed the transferable signal is thin, so it won't
+be great; it will be *calibrated*, rather than stuck at "everything is
+High."
 
 ## Deviations from the original plan
 
