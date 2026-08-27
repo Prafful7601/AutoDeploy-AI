@@ -4,10 +4,15 @@
 # --- Data & modeling ---
 numpy==1.26.4
 pandas==2.2.2
+pyarrow==17.0.0
 scikit-learn==1.5.1
-xgboost==2.1.1
 shap==0.46.0
 joblib==1.4.2
+# Gradient-boosting model: scikit-learn's HistGradientBoostingClassifier
+# (histogram-based, same family as LightGBM/XGBoost) rather than the
+# xgboost/lightgbm packages, whose macOS wheels require Homebrew's libomp
+# (not installed on this machine and not something to install system-wide
+# for a demo project). No functional loss for this dataset's size.
 
 # --- Plotting (EDA / evaluation figures) ---
 matplotlib==3.9.1

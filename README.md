@@ -7,10 +7,10 @@ history, project context) — and explains *why* via SHAP feature attributions.
 This is a scoped, defensible demo, not a production system. See
 [Out of scope](#out-of-scope--future-work) for what was deliberately left out.
 
-> **Status: Stage 0 (project scaffolding) complete.** Stages 1–4 below are
-> not yet built. This README will be rewritten at the end with the real data
-> source, feature list, and honest performance numbers — nothing below the
-> status line is a claim of results yet.
+> **Status: Stage 1 (data) complete.** Stages 2–4 below are not yet built.
+> This README will be rewritten at the end with the full feature list and
+> honest model performance numbers — nothing in [Performance](#performance)
+> is a claim of results yet.
 
 ## How the pieces fit together
 
@@ -64,18 +64,36 @@ so results are reproducible run to run.
 
 ## Running each stage
 
-Filled in as each stage lands:
-
-- **Stage 1 (data):** _not yet built_
+- **Stage 1 (data):**
+  ```bash
+  python scripts/01_fetch_data.py       # downloads + extracts TravisTorrent (~3.8 GB uncompressed)
+  python scripts/02_prepare_dataset.py  # collapses to build level, labels, writes data/processed/builds_labeled.parquet
+  ```
 - **Stage 2 (train):** _not yet built_
 - **Stage 3 (API):** _not yet built_
 - **Stage 4 (web UI):** _not yet built_
 
 ## Data source
 
-_To be filled in after Stage 1 — will state plainly which source was used
-(TravisTorrent or GitHub Actions API), how many build records were
-collected, and the class balance._
+**TravisTorrent** (Beller, Gousios & Zaidman, MSR 2017) — the standard public
+research dataset for CI build-outcome prediction. Downloaded from its
+permanent Figshare archive (its original site, travistorrent.testroots.org,
+has since been taken over by an unrelated domain — do not use it). No
+fallback to the GitHub Actions API was needed; TravisTorrent was obtainable
+on the first attempt and is a stronger source than a fresh 15–20 repo sample
+would be in the time available.
+
+Author identity (needed for "author history" features) isn't in
+TravisTorrent's main table, so it's joined in from a companion commit-metadata
+dataset (Zenodo 829968). That dataset only covers a subset of TravisTorrent's
+projects, so the final dataset is restricted to the 243 projects with real
+commit-author coverage — full reasoning and numbers in
+[outputs/reports/stage1_data_report.md](outputs/reports/stage1_data_report.md).
+
+**Final dataset:** 261,139 labeled builds across 243 projects, 2011–2016.
+
+**Class balance:** 71.3% passed / 28.7% failed-or-errored — imbalanced,
+handled with class weights in Stage 2 rather than resampling.
 
 ## Performance
 
