@@ -10,9 +10,10 @@ This is a scoped, defensible demo, not a production system. See
 > **Status: Stage 3 in progress.** Stages 1–2 complete (data, features,
 > model, SHAP). Stage 3 Layer 1 (prediction API) built and tested, plus
 > Layer 1b (explicit cold-start handling — see
-> [Cold start](#cold-start-the-honest-version)). Layers 2 (live feature
-> extractor) and 3 (GitHub Action) not yet built. Stage 4 (web UI) not
-> started. Real numbers below, not projections.
+> [Cold start](#cold-start-the-honest-version)). Layer 2 (live GitHub
+> feature extractor + parity report) built and tested against a real repo.
+> Layer 3 (GitHub Action) not yet built. Stage 4 (web UI) not started. Real
+> numbers below, not projections.
 
 ## Architecture: train → extract → serve → annotate
 
@@ -27,8 +28,15 @@ web/           single-page UI that calls the API (Stage 4)
 1. **Train** (`scripts/`) — TravisTorrent build history -> leakage-free
    features -> HistGradientBoostingClassifier, evaluated against real
    baselines, explained with SHAP. Offline, one-time (rerun to retrain).
-2. **Extract** (Stage 3, Layer 2, in progress) — given a live repo + commit,
-   pull the same 31 features from the GitHub API, causally (no future data).
+2. **Extract** (`extractor/`, Stage 3 Layer 2, done) — given a live repo +
+   commit, pulls the same 31 features from the GitHub API, causally (no
+   future data). Every feature is rated EXACT/APPROXIMATED/UNAVAILABLE
+   against what training actually used — see
+   [outputs/reports/stage3_feature_parity.md](outputs/reports/stage3_feature_parity.md).
+   Two structural caveats matter more than any single feature: the model
+   trained on Travis CI outcomes but serves against GitHub Actions outcomes
+   (a different CI system), and live project/author history is bounded by
+   how long Actions has been enabled on a repo, not its full git history.
 3. **Serve** (`api/`, Stage 3 Layers 1 + 1b, done) — FastAPI wraps the
    trained model: `POST /predict` returns failure probability, risk tier, and
    the SHAP-ranked features driving that specific prediction — or a
@@ -82,7 +90,16 @@ so results are reproducible run to run.
   ```
   See [api/README.md](api/README.md) for the endpoints and the cold-start
   rule.
-- **Stage 3, Layers 2–3 (extractor, GitHub Action):** _not yet built_
+- **Stage 3, Layer 2 (live extractor):**
+  ```bash
+  python -m extractor.cli OWNER/REPO SHA --branch main   # prints the 31-feature JSON vector
+  python scripts/07_generate_parity_report.py            # regenerates the feature parity report
+  pytest tests/test_extractor.py -v
+  ```
+  Set `GITHUB_TOKEN` in `.env` for a 5,000/hour rate limit (works
+  unauthenticated at 60/hour for a quick check). Tested live against
+  `spf13/cobra` — a real repo with real Actions history.
+- **Stage 3, Layer 3 (GitHub Action):** _not yet built_
 - **Stage 4 (web UI):** _not yet built_
 
 ## Data source

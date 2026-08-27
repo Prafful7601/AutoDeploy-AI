@@ -1,0 +1,56 @@
+{
+  "_meta": {
+    "captured": "2026-08-28, live, unauthenticated (60 req/hour), this development session",
+    "repo": "spf13/cobra",
+    "sha": "adbc8813901bba65827259daa8e22ff94ec1f30e",
+    "branch": "main",
+    "commit_message": "fix: resolve macOS test link failure and update lint rules (#2429)",
+    "note": "Frozen as a fixture rather than re-fetched on every report build: a full extraction costs ~15 GitHub API calls, and this environment has no GITHUB_TOKEN (60/hour unauthenticated limit, exhausted during this session's manual testing). Used by scripts/07_generate_parity_report.py to ground the parity report in a real worked example instead of hypothetical numbers. The commits_on_touched_files value (55) is from the run AFTER a path/endpoint parameter collision bug was fixed (see extractor/github_client.py) — an earlier run this same session returned 0 for that one field due to the bug; every other value and every provenance note is unaffected by that bug and unchanged between runs."
+  },
+  "features": {
+    "src_churn": 24,
+    "files_added": 0,
+    "files_deleted": 0,
+    "files_modified": 3,
+    "total_files_changed": 3,
+    "src_files_changed": 3,
+    "doc_files_changed": 0,
+    "other_files_changed": 0,
+    "tests_added": 0,
+    "tests_deleted": 0,
+    "test_file_ratio": 0.0,
+    "num_commits_in_build": 1,
+    "commits_on_touched_files": 55,
+    "repo_age_days": 4693,
+    "repo_num_commits": 1106,
+    "team_size": 330,
+    "language": "go",
+    "is_pr": 1,
+    "is_main_branch": 1,
+    "by_core_team_member": 1,
+    "sloc": 4549,
+    "test_lines_per_kloc": 274.59,
+    "test_cases_per_kloc": 0.0,
+    "asserts_per_kloc": 28.81,
+    "previous_build_status": 0,
+    "project_prior_failure_rate": 0.0410958904109589,
+    "project_prior_build_count": 292,
+    "consecutive_failure_streak": 0,
+    "author_prior_builds_in_project": 13,
+    "author_prior_failure_rate_in_project": 0.15384615384615385,
+    "author_days_since_last_build_in_project": 0.7765162037037037
+  },
+  "predict_response": {
+    "status": "ok",
+    "failure_probability": 0.1921294273508007,
+    "probability_confidence": "normal",
+    "risk_tier": "Low",
+    "top_contributors": [
+      {"feature": "consecutive_failure_streak", "shap_value": -0.6026773185096742, "direction": "decreases risk"},
+      {"feature": "previous_build_status", "shap_value": -0.49106124079176566, "direction": "decreases risk"},
+      {"feature": "project_prior_failure_rate", "shap_value": -0.3245550725073961, "direction": "decreases risk"},
+      {"feature": "team_size", "shap_value": 0.20630598828423702, "direction": "increases risk"},
+      {"feature": "is_pr", "shap_value": 0.13672861612228188, "direction": "increases risk"}
+    ]
+  }
+}
