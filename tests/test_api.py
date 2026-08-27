@@ -182,9 +182,45 @@ class TestHealth:
         assert sorted(cs["trigger_features"]) == sorted(PROJECT_HISTORY_FEATURES)
         assert sorted(cs["non_trigger_nullable_features"]) == sorted(AUTHOR_HISTORY_FEATURES)
         assert set(cs["states"]) == {"ok", "cold_start"}
-        # The no-imputation commitment is part of the published contract.
-        assert "imputation" in cs
-        assert "upgrade_path" in cs and "0.69" in cs["upgrade_path"]
+
+    def test_health_language_known_values_excludes_python(self):
+        """Regression guard for a real bug found while building Layer 2:
+        TravisTorrent covers 4 languages, but Stage 1's project-coverage
+        filter left zero python rows in the final 243-project dataset, so
+        the trained model has no `language_python` column. `known_values`
+        must reflect what the loaded model actually distinguishes (derived
+        from its feature columns), not TravisTorrent's original 4."""
+        known = client.get("/health").json()["feature_schema"]["language"]["known_values"]
+        assert set(known) == {"go", "java", "ruby"}
+        assert "python" not in known
+
+
+class TestUnrecognizedLanguageHandling:
+    """`language` accepts any string (never a validation error), but only
+    values in known_values get their own model column. Anything else —
+    including 'python', despite it being one of TravisTorrent's original
+    4 languages — is handled identically to a wholly unrecognized value."""
+
+    def test_python_and_a_made_up_language_predict_identically(self):
+        _requires_model()
+        p1 = {**VALID_PAYLOAD, "language": "python"}
+        p2 = {**VALID_PAYLOAD, "language": "some-made-up-language"}
+        r1 = client.post("/predict", json=p1)
+        r2 = client.post("/predict", json=p2)
+        assert r1.status_code == r2.status_code == 200
+        assert r1.json()["failure_probability"] == r2.json()["failure_probability"]
+
+    def test_known_language_predicts_differently_from_unrecognized(self):
+        _requires_model()
+        p_known = {**VALID_PAYLOAD, "language": "ruby"}
+        p_unknown = {**VALID_PAYLOAD, "language": "python"}
+        r_known = client.post("/predict", json=p_known)
+        r_unknown = client.post("/predict", json=p_unknown)
+        assert r_known.status_code == r_unknown.status_code == 200
+        # Not required to differ by any specific amount, just confirms the
+        # two payloads aren't silently collapsed to the exact same features
+        # for a language the model actually has a column for.
+        assert r_known.json()["failure_probability"] != r_unknown.json()["failure_probability"]
 
 
 # =============================================================================

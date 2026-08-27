@@ -129,7 +129,21 @@ from .coldstart import (  # noqa: F401  (re-exported: schema.py is the contract'
     STATUS_OK,
 )
 
-KNOWN_LANGUAGES = {"ruby", "python", "java", "go"}
+# NOT {"ruby", "python", "java", "go"}. TravisTorrent covers those 4
+# languages overall, but Stage 1's project-coverage filter (see
+# outputs/reports/stage1_data_report.md) happened to leave ZERO python
+# rows in the final 243-project dataset — verified: `gh_lang` value_counts
+# on data/processed/builds_labeled.parquet is {ruby, java, go} only. The
+# trained model therefore has no `language_python` column at all. This
+# constant is the model-facing ground truth, not the dataset's original
+# language coverage — PredictionService derives the equivalent set from
+# the loaded model's actual feature columns at startup (see model.py) so
+# this can't silently drift from what the model was actually trained on;
+# it's kept here too since schema.py is this module's documentation
+# entry point. A repo whose language is "python" is NOT an error, but it
+# IS treated identically to an unrecognized language (all language dummy
+# columns 0) — flagged prominently in the Stage 3 Layer 2 parity report.
+KNOWN_LANGUAGES = {"ruby", "java", "go"}
 
 
 class BuildFeatures(BaseModel):
@@ -174,7 +188,7 @@ class BuildFeatures(BaseModel):
     asserts_per_kloc: float = Field(ge=0)
     is_pr: int = Field(ge=0, le=1, description="1 if this build is triggered by a pull request")
     by_core_team_member: int = Field(ge=0, le=1)
-    language: str = Field(description=f"one of {sorted(KNOWN_LANGUAGES)}; anything else is accepted but treated as an unrecognized-language reference case (see stage3 API notes)")
+    language: str = Field(description=f"the model distinguishes {sorted(KNOWN_LANGUAGES)} specifically; any other value (including 'python' — see KNOWN_LANGUAGES above) is accepted but treated as an unrecognized-language reference case, i.e. identically to no language information at all")
     is_main_branch: int = Field(ge=0, le=1)
 
     model_config = {

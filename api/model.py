@@ -69,6 +69,10 @@ class PredictionService:
         self.feature_cols: Optional[list] = None
         self.explainer = None
         self.load_error: Optional[str] = None
+        # Fallback used only while no model is loaded (e.g. /health before
+        # training has run); overwritten with the real, model-derived set
+        # the moment a model loads successfully.
+        self.known_languages = sorted(KNOWN_LANGUAGES)
         self._load()
 
     def _load(self):
@@ -86,7 +90,16 @@ class PredictionService:
             self.model = bundle["model"]
             self.feature_cols = bundle["feature_cols"]
             self.explainer = shap.TreeExplainer(self.model)
-            logger.info("Loaded model from %s (%d features)", self.model_path, len(self.feature_cols))
+            # Derived from the actual trained columns, not the hardcoded
+            # KNOWN_LANGUAGES guess in schema.py — this is what protects
+            # against exactly the bug that guess had (claiming 'python' was
+            # a recognized language when the final training set had zero
+            # python rows and no language_python column at all).
+            self.known_languages = sorted(
+                c[len("language_"):] for c in self.feature_cols if c.startswith("language_")
+            )
+            logger.info("Loaded model from %s (%d features, languages=%s)",
+                        self.model_path, len(self.feature_cols), self.known_languages)
         except Exception as exc:  # noqa: BLE001 - deliberately broad: any load failure must be surfaced clearly
             self.load_error = f"Failed to load model artifact at {self.model_path}: {exc!r}"
             logger.error("MODEL NOT LOADED — %s", self.load_error)
@@ -107,6 +120,10 @@ class PredictionService:
                 "type": "int" if field.annotation is int else "string" if field.annotation is str else "float",
                 "description": field.description,
             }
+        # Ground truth for "language", derived from the loaded model itself
+        # rather than the static KNOWN_LANGUAGES guess — see the __init__
+        # comment on self.known_languages for why that distinction matters.
+        schema["language"]["known_values"] = self.known_languages
         return schema
 
     def cold_start_behavior(self) -> dict:
@@ -159,7 +176,7 @@ class PredictionService:
     def _row_from_features(self, features: BuildFeatures) -> pd.DataFrame:
         data = features.model_dump()
         language = data.pop("language").strip().lower()
-        for lang in KNOWN_LANGUAGES:
+        for lang in self.known_languages:
             data[f"language_{lang}"] = 1 if language == lang else 0
         # None -> NaN for the cold-start-allowed fields; pydantic already
         # guarantees every other key is present and non-null.

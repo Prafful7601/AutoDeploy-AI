@@ -132,6 +132,26 @@ interim answer, and it is the correct floor regardless — a system that
 says "I don't know enough yet" beats one that confidently flags every new
 repo red.
 
+## A related finding: "python" isn't actually a known language here
+
+Found while building Stage 3 Layer 2 (the live extractor needs to know
+which languages the model distinguishes). TravisTorrent covers 4 languages,
+but Stage 1's project-coverage filter (see
+`outputs/reports/stage1_data_report.md`) happened to leave **zero python
+rows** in the final 243-project dataset — verified directly against
+`data/processed/builds_labeled.parquet` and the trained model's own feature
+columns (`bundle["feature_cols"]` has `language_go`, `language_java`,
+`language_ruby` — no `language_python`). Before this fix, `schema.py`'s
+`KNOWN_LANGUAGES` hardcoded all 4, so a request with `"language": "python"`
+was silently treated identically to `"language": "some-made-up-string"` —
+no error, no warning, just quietly collapsed to the unrecognized-language
+case. Fixed two ways: `KNOWN_LANGUAGES` in `schema.py` now says `{ruby,
+java, go}`, and `PredictionService` additionally derives its working set
+directly from the loaded model's feature columns at startup (exposed as
+`known_values` on `/health`'s `language` field) so this can't silently
+drift again if the model is retrained on different project coverage.
+Regression-tested in `tests/test_api.py::TestUnrecognizedLanguageHandling`.
+
 ## Tests
 
 ```bash
