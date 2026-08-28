@@ -10,7 +10,7 @@ const TEAM = [
 export function ProjectCredits() {
   return (
     <section className="project-credits" aria-labelledby="project-credits-heading">
-      <div className="project-credits__eyebrow">Major Project Synopsis · 2026–27</div>
+      <div className="project-credits__eyebrow">Major Project · 2026–27</div>
       <p id="project-credits-heading" className="project-credits__subtitle">
         An Intelligent CI/CD Pipeline Optimizer with Predictive Build Failure Analysis
       </p>
