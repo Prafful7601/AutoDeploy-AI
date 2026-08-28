@@ -1,0 +1,37 @@
+# Render Blueprint — https://render.com/docs/blueprint-spec
+#
+# Deploys the existing FastAPI backend (api/main.py) as-is: no training, no
+# extra services. The model this serves (outputs/models/hgb_split_temporal.joblib,
+# ~405 KB) is committed to the repo specifically so a fresh deploy has
+# something to serve immediately — see the README's Deployment section for
+# why that's a deliberate exception to the project's usual "never commit
+# model artifacts" rule, and the alternatives considered.
+#
+# What you still need to do in Render's dashboard after connecting this repo:
+#   1. Set GITHUB_TOKEN (marked `sync: false` below — Render will prompt for
+#      it and never store it in this file or git). Needed for a reasonable
+#      GitHub API rate limit on /predict-live; the service still runs
+#      without it, just at 60 requests/hour instead of 5,000.
+#   2. Once you have your Vercel frontend's URL, tighten CORS_ORIGINS below
+#      from "*" to that exact URL (edit the env var in Render's dashboard —
+#      no redeploy of this file needed).
+services:
+  - type: web
+    name: autodeploy-ai-api
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn api.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.9.6
+      - key: GITHUB_TOKEN
+        sync: false
+      - key: CORS_ORIGINS
+        # Permissive for initial setup, per instruction — tighten to the
+        # real Vercel URL once known (e.g. "https://autodeploy-ai.vercel.app").
+        # Safe as "*" here specifically because api/main.py never sets
+        # allow_credentials=True, so the browser's stricter
+        # wildcard-plus-credentials restriction doesn't apply.
+        value: "*"

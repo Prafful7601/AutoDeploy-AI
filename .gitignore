@@ -10,8 +10,14 @@ data/processed/*
 !data/processed/.gitkeep
 
 # --- Trained models / large outputs (kept out of git; regenerate via scripts) ---
+# EXCEPTION, deliberate: hgb_split_temporal.joblib (~405 KB — genuinely small,
+# not a "large output") IS committed, specifically so a fresh Render deploy has
+# something to serve without retraining on every deploy. See the README's
+# Deployment section for the full reasoning. The held-out-projects sibling
+# model stays ignored — it's Stage 2 evaluation output, never served.
 outputs/models/*
 !outputs/models/.gitkeep
+!outputs/models/hgb_split_temporal.joblib
 outputs/reports/*.html
 
 # --- Python ---

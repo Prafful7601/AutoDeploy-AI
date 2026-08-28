@@ -384,6 +384,92 @@ page, not a tooltip.
 Screenshots and what to capture for a portfolio: see
 [web/README.md](web/README.md#what-to-screenshot-for-a-portfolio).
 
+## Deployment (Render + Vercel, both free tier)
+
+Config is prepared; this section is what to do in each dashboard after
+connecting the repo. Nothing here has been deployed by this project
+itself — no accounts, no live URLs yet.
+
+### Backend → Render
+
+`render.yaml` at the repo root is a Render Blueprint — connecting this
+repo in Render's dashboard should auto-detect it and offer to create the
+service with everything below pre-filled.
+
+- **Start command:** `uvicorn api.main:app --host 0.0.0.0 --port $PORT`
+  — binds to `0.0.0.0` and Render's assigned `$PORT`, not `localhost`.
+- **Python version:** pinned two ways for redundancy — `.python-version`
+  (`3.9.6`) and a `PYTHON_VERSION` env var in `render.yaml`, since
+  Render's respected mechanism has changed across its docs over time.
+  This matters more than usual here: the committed model was pickled
+  under this exact Python/scikit-learn combination.
+- **`requirements.txt`** is the same fully-pinned file used everywhere
+  else in this project (verified: every line has `==`, no loose
+  specifiers) — one dependency list, not a slimmed-down deploy-only copy.
+- **`GITHUB_TOKEN`**: marked `sync: false` in `render.yaml`, meaning
+  Render will prompt for it once in the dashboard and never store it in
+  the file or git. Read server-side only via `os.environ.get(...)` (see
+  `api/main.py`, `extractor/github_client.py`) — confirmed nowhere in
+  this codebase is a token hardcoded (checked with `git grep` across
+  everything tracked). The API still runs without it, just at GitHub's
+  unauthenticated 60-requests/hour limit instead of 5,000/hour.
+- **`CORS_ORIGINS`**: defaults to `"*"` in `render.yaml` so the frontend
+  works immediately without a chicken-and-egg URL problem (Vercel's URL
+  isn't known until after its first deploy). Safe as a wildcard
+  specifically because `api/main.py` never sets `allow_credentials=True`.
+  Tighten it to the real Vercel URL afterward by editing the env var
+  directly in Render's dashboard — no code change or redeploy needed.
+
+**The model artifact — flagged explicitly, a real decision, not an
+oversight:** `outputs/models/hgb_split_temporal.joblib` has been
+gitignored since Stage 2 ("never commit model artifacts"). A gitignored
+model does not exist on a fresh Render checkout, and Render's free tier
+isn't a good place to retrain from scratch on every deploy (the full
+pipeline downloads ~525 MB of TravisTorrent data first). Checked the
+actual file size before deciding: **414,805 bytes — 405 KB.** That's not
+"a large binary," it's smaller than several images already in this repo.
+So it's now committed as a deliberate, narrow exception (see the
+`.gitignore` comment at that line), rather than solved with a training
+step or a separately-hosted release asset — both real options that were
+considered and rejected here specifically because the file is small
+enough that they'd be solving a problem this project doesn't actually
+have. The sibling held-out-projects model stays gitignored; it's Stage 2
+evaluation output, never served.
+
+### Frontend → Vercel
+
+`web/vercel.json` pins the build explicitly (`npm run build` →
+`dist/`, `framework: "vite"`) rather than relying on Vercel's
+auto-detection alone. **Set the project's Root Directory to `web/`** in
+Vercel's dashboard — this repo isn't a single-app repo, and Vercel won't
+know the frontend lives in a subdirectory otherwise.
+
+- **`VITE_API_BASE_URL`**: set this in Vercel's Environment Variables to
+  the Render service's URL once deployed (e.g.
+  `https://autodeploy-ai-api.onrender.com`). Vite bakes it into the
+  build at build time — there's no hardcoded `localhost` in the shipped
+  bundle; unset, the frontend falls back to a `localhost:8000` default
+  that simply won't resolve in a visitor's browser, which itself
+  triggers the same honest demo-mode fallback (see below), not a broken
+  page.
+
+**The fallback — confirmed working, and there's a real nuance worth
+knowing for Render specifically:** `web/src/lib/api.js`'s `checkHealth()`
+gives the backend 2.5 seconds to respond to `GET /health` before falling
+back to demo mode; already verified live (Stage 4) that an unreachable or
+slow API results in the existing, honest demo-mode banner, not an error
+page. **Render's free tier spins a service down after ~15 minutes idle
+and takes up to ~50 seconds to wake back up** — well past that 2.5s
+window. In practice this means: after any idle period, the dashboard will
+correctly and honestly show demo mode on first load, even though the
+backend would have answered if given another 45+ seconds. This is a
+deliberate tradeoff, not a bug — a portfolio visitor should never wait
+tens of seconds staring at a loading spinner before seeing a working
+page. If a visitor does submit a live query while the backend is cold,
+`predictLive()` has no artificial timeout and will simply wait through
+the wake-up, showing the existing "Extracting features…" state the whole
+time.
+
 ## Deviations from the original plan
 
 - **Gradient-boosting model is scikit-learn's `HistGradientBoostingClassifier`,
@@ -411,6 +497,11 @@ Screenshots and what to capture for a portfolio: see
 - **No "frontend-design" skill exists in this environment** (Stage 4) —
   the brief named one to load before styling the dashboard. Styled by hand
   instead; see `web/README.md`.
+- **The trained model is now committed** (`outputs/models/hgb_split_temporal.joblib`),
+  reversing Stage 2's "never commit model artifacts" rule — deliberately,
+  for deployment: it's 405 KB, and a gitignored model doesn't exist on a
+  fresh Render checkout. See the Deployment section above for the full
+  reasoning and the alternatives considered and rejected.
 - Full list of smaller judgment calls (temporal cutoff choice, author-history
   scoping, missing-value handling, etc.) in each stage's report under
   `outputs/reports/`.
