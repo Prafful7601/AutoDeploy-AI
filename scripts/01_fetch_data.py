@@ -15,7 +15,22 @@ permanent home: https://doi.org/10.6084/m9.figshare.19314170
 
 This script pulls the file list from Figshare's public API, downloads the
 most recent snapshot (`final-2017-01-25.csv.gz`, ~264 MB compressed), and
-extracts it to data/raw/. It's idempotent — reruns skip work already done.
+extracts it to data/raw/. It also downloads the companion commit-metadata
+dataset (Zenodo record 829968, ~260 MB compressed) that scripts/02 needs
+for author identity — TravisTorrent's own table has no author column at
+all (see Stage 1's data report). It's idempotent — reruns skip work
+already done.
+
+BUG FOUND AND FIXED HERE: this script originally only fetched the main
+TravisTorrent CSV. The commit-metadata file was fetched by hand with a
+one-off `curl` command during Stage 1 development and never added here —
+invisible locally, since the file just sat in data/raw/ already, but a
+genuine reproducibility gap: the Stage 3 Layer 3 GitHub Action's first
+live run (a fresh checkout with no data/raw/ at all) failed with
+`sqlite3.OperationalError: no such table: commits` inside
+scripts/02_prepare_dataset.py, because commitlog.sqlite was never
+downloaded. Fixed by adding it here, where the reproducible pipeline
+actually lives.
 
 Why not the GitHub Actions API fallback
 -----------------------------------------
@@ -43,6 +58,16 @@ EXPECTED_FILENAME = "final-2017-01-25.csv.gz"
 
 GZ_PATH = RAW_DATA_DIR / "travistorrent_final.csv.gz"
 CSV_PATH = RAW_DATA_DIR / "travistorrent_final.csv"
+
+# Companion commit-metadata dataset (project, sha, author_name, author_email,
+# ...) — used by scripts/02_prepare_dataset.py to attach author identity,
+# since TravisTorrent's own table doesn't have one. Same research group,
+# hosted on Zenodo rather than Figshare. Size verified against the
+# published record at download time, same as the main dataset above.
+COMMITLOG_URL = "https://zenodo.org/records/829968/files/commitlog.sqlite.gz?download=1"
+COMMITLOG_GZ_SIZE = 260_528_405
+COMMITLOG_GZ_PATH = RAW_DATA_DIR / "commitlog.sqlite.gz"
+COMMITLOG_PATH = RAW_DATA_DIR / "commitlog.sqlite"
 
 
 def resolve_download_url() -> str:
@@ -90,10 +115,16 @@ def extract(gz_path: Path, csv_path: Path) -> None:
 
 def main():
     RAW_DATA_DIR.mkdir(parents=True, exist_ok=True)
+
     url, size = resolve_download_url()
     download(url, size, GZ_PATH)
     extract(GZ_PATH, CSV_PATH)
+
+    download(COMMITLOG_URL, COMMITLOG_GZ_SIZE, COMMITLOG_GZ_PATH)
+    extract(COMMITLOG_GZ_PATH, COMMITLOG_PATH)
+
     print(f"\nRaw TravisTorrent CSV ready at: {CSV_PATH}")
+    print(f"Raw commit-metadata sqlite ready at: {COMMITLOG_PATH}")
 
 
 if __name__ == "__main__":
