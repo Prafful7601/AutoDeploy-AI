@@ -1,0 +1,108 @@
+/*
+Design tokens. No framework/skill was available to load for this build
+(the "frontend-design" skill named in the brief doesn't exist in this
+environment — flagged in the README) — this palette and scale were chosen
+by hand for a clean, technical, credible look: a portfolio piece for
+engineering roles, not a product landing page. Muted, desaturated colors;
+a monospace face reserved for technical figures (feature names, raw
+numbers) so it reads as "instrumentation," not decoration; generous
+whitespace; no gradients, shadows kept minimal and functional.
+*/
+
+:root {
+  /* Neutrals */
+  --color-bg: #f7f7f5;
+  --color-surface: #ffffff;
+  --color-surface-sunken: #f0f0ee;
+  --color-border: #e0e0dc;
+  --color-border-strong: #c9c9c3;
+  --color-text: #1c1c1a;
+  --color-text-secondary: #5c5c56;
+  --color-text-muted: #8a8a83;
+
+  /* Accent (interactive, links, focus) */
+  --color-accent: #2f5d62;
+  --color-accent-hover: #234548;
+  --color-accent-soft: #e4edee;
+
+  /* Risk tiers — muted, not saturated/alarming */
+  --color-low: #3f7d5c;
+  --color-low-bg: #e9f3ed;
+  --color-low-border: #bcdccb;
+
+  --color-medium: #a06a1f;
+  --color-medium-bg: #faf1e2;
+  --color-medium-border: #ecd3a2;
+
+  --color-high: #a13a3a;
+  --color-high-bg: #f8ebea;
+  --color-high-border: #e6bcba;
+
+  /* Cold-start — deliberately NOT a risk color. Neutral/blue, visually
+     distinct from every tier above so it can never be mistaken for one. */
+  --color-coldstart: #3d5a80;
+  --color-coldstart-bg: #eaeff5;
+  --color-coldstart-border: #c3d0e0;
+
+  /* Error / could-not-score */
+  --color-error: #6b6b64;
+  --color-error-bg: #efefec;
+
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: "SF Mono", ui-monospace, "Cascadia Code", "Roboto Mono", Consolas, monospace;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  --shadow-card: 0 1px 2px rgba(28, 28, 26, 0.04), 0 1px 8px rgba(28, 28, 26, 0.03);
+
+  --max-width: 880px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #16171a;
+    --color-surface: #1e2024;
+    --color-surface-sunken: #26282d;
+    --color-border: #33363c;
+    --color-border-strong: #454951;
+    --color-text: #eceef0;
+    --color-text-secondary: #a7abb3;
+    --color-text-muted: #767b85;
+
+    --color-accent: #6fb3ba;
+    --color-accent-hover: #8ec6cc;
+    --color-accent-soft: #21363a;
+
+    --color-low: #6fbf94;
+    --color-low-bg: #1a2b23;
+    --color-low-border: #2e4a3b;
+
+    --color-medium: #d9a655;
+    --color-medium-bg: #302719;
+    --color-medium-border: #4d3e24;
+
+    --color-high: #dd7a7a;
+    --color-high-bg: #322020;
+    --color-high-border: #4d2e2e;
+
+    --color-coldstart: #8fa9c9;
+    --color-coldstart-bg: #1e2733;
+    --color-coldstart-border: #33455c;
+
+    --color-error: #9a9a92;
+    --color-error-bg: #24251f;
+
+    --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.2), 0 1px 8px rgba(0, 0, 0, 0.16);
+  }
+}

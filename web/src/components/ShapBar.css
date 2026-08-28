@@ -1,0 +1,58 @@
+.shap-bar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.shap-bar__row {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+@media (max-width: 560px) {
+  .shap-bar__row {
+    grid-template-columns: 56px 1fr;
+  }
+}
+
+.shap-bar__track {
+  height: 8px;
+  background: var(--color-surface-sunken);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.shap-bar__fill {
+  height: 100%;
+  border-radius: 4px;
+  min-width: 3px;
+}
+
+.shap-bar__fill--up {
+  background: var(--color-high);
+}
+
+.shap-bar__fill--down {
+  background: var(--color-low);
+}
+
+.shap-bar__label {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--color-text);
+}
+
+.shap-bar__arrow {
+  font-size: 10px;
+}
+
+.shap-bar__arrow--up {
+  color: var(--color-high);
+}
+
+.shap-bar__arrow--down {
+  color: var(--color-low);
+}
