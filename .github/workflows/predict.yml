@@ -28,16 +28,21 @@ jobs:
         with:
           python-version: '3.9'
 
-      # The trained model is gitignored (Stage 2 policy: model binaries
-      # never committed). Rather than requiring a manually-published
-      # artifact somewhere, this job trains it itself and caches the
-      # result — self-contained, no extra secrets/infra needed by anyone
-      # who copies this Action to their own repo. First run on a given
-      # commit of the training scripts pays the full training cost
-      # (downloads TravisTorrent, ~5-10 min); every run after that until
-      # those scripts change restores from cache in seconds. Flagged in
-      # the Stage 3 write-up as a real architectural decision, not an
-      # afterthought.
+      # The trained model (outputs/models/hgb_split_temporal.joblib, ~405 KB)
+      # is committed to the repo as of the Render deployment work — a
+      # deliberate exception to the general "never commit model artifacts"
+      # policy, made because the file turned out to be small enough that the
+      # usual reasons not to don't apply (see the README's Deployment
+      # section). So the checkout step above already provides it, most of
+      # the time. The cache + train-on-miss logic below is a safety net for
+      # the case that stops being true — someone forks this repo without the
+      # committed model, or a future change reverts to gitignoring it —
+      # checked via hashFiles() directly rather than the cache step's own
+      # cache-hit output, so it correctly recognizes "the file is already
+      # here" regardless of whether checkout or cache is what provided it.
+      # Retraining pays the full cost once (downloads TravisTorrent, ~1-2
+      # min observed) and caches the result for any run after that until the
+      # training scripts change.
       - name: Cache trained model
         id: model-cache
         uses: actions/cache@v4
@@ -48,8 +53,8 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Train model (only on a cache miss)
-        if: steps.model-cache.outputs.cache-hit != 'true'
+      - name: Train model (only if not already present from git or cache)
+        if: hashFiles('outputs/models/hgb_split_temporal.joblib') == ''
         continue-on-error: true  # let post_prediction.py report "could not score" honestly instead of just going red
         run: |
           python scripts/01_fetch_data.py
