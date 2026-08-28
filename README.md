@@ -7,13 +7,17 @@ history, project context) — and explains *why* via SHAP feature attributions.
 This is a scoped, defensible demo, not a production system. See
 [Out of scope](#out-of-scope--future-work) for what was deliberately left out.
 
-> **Status: Stage 3 in progress.** Stages 1–2 complete (data, features,
-> model, SHAP). Stage 3 Layer 1 (prediction API) built and tested, plus
-> Layer 1b (explicit cold-start handling — see
-> [Cold start](#cold-start-the-honest-version)). Layer 2 (live GitHub
-> feature extractor + parity report) built and tested against a real repo.
-> Layer 3 (GitHub Action) not yet built. Stage 4 (web UI) not started. Real
-> numbers below, not projections.
+> **Status: Stage 3 nearly complete — one push blocked.** Stages 1–2
+> complete (data, features, model, SHAP). Stage 3 Layers 1 + 1b (prediction
+> API + cold-start handling) and Layer 2 (live GitHub feature extractor +
+> parity report) built, tested, and pushed. Layer 3 (advisory GitHub
+> Action) is built and passes 99 local tests, but the workflow file itself
+> (`.github/workflows/predict.yml`) has NOT yet been pushed or run live on
+> GitHub — the git credential in use lacks the `workflow` OAuth scope
+> GitHub requires for that specific file. See
+> [Using the Action](#using-the-action) for what's verified so far and
+> what's still pending. Stage 4 (web UI) not started. Real numbers below,
+> not projections.
 
 ## Architecture: train → extract → serve → annotate
 
@@ -41,9 +45,12 @@ web/           single-page UI that calls the API (Stage 4)
    trained model: `POST /predict` returns failure probability, risk tier, and
    the SHAP-ranked features driving that specific prediction — or a
    `cold_start` state, with no tier, when the repo has no build history yet.
-4. **Annotate** (Stage 3, Layer 3, planned) — a GitHub Action that runs the
-   extractor + API on every push/PR and posts the result as a commit status
-   and PR comment, in plain language.
+4. **Annotate** (`.github/workflows/predict.yml`, Stage 3 Layer 3, code
+   done, **not yet pushed/run live** — see the status banner above) — a
+   GitHub Action that runs on every push/PR, posts the result as a commit
+   status (always advisory, never blocking) and, on PRs, a comment — plain
+   language, an experimental banner leading every post, and no bare
+   percentage as a headline. See [Using the Action](#using-the-action).
 
 Each stage/layer is committed and reviewed before the next one starts.
 
@@ -99,7 +106,12 @@ so results are reproducible run to run.
   Set `GITHUB_TOKEN` in `.env` for a 5,000/hour rate limit (works
   unauthenticated at 60/hour for a quick check). Tested live against
   `spf13/cobra` — a real repo with real Actions history.
-- **Stage 3, Layer 3 (GitHub Action):** _not yet built_
+- **Stage 3, Layer 3 (GitHub Action):** `.github/workflows/predict.yml` —
+  runs automatically on push/PR once added to a repo (see
+  [Using the Action](#using-the-action)); `pytest tests/test_post_prediction.py -v`
+  to test the comment-composition logic locally. **Not yet pushed to this
+  repo** (blocked — see status banner); the workflow file exists locally
+  and all 99 tests pass, but it hasn't run on GitHub's infrastructure yet.
 - **Stage 4 (web UI):** _not yet built_
 
 ## Data source
@@ -224,6 +236,69 @@ of no tier at all. SHAP showed the transferable signal is thin, so it won't
 be great; it will be *calibrated*, rather than stuck at "everything is
 High."
 
+## Using the Action
+
+> **Current status: not yet run live.** `.github/workflows/predict.yml` and
+> `.github/scripts/post_prediction.py` are written and pass 99 local tests
+> (including structural checks on every hard requirement below), but the
+> workflow file itself hasn't been pushed to this repo yet — the git
+> credential in use here lacks the `workflow` OAuth scope GitHub requires
+> to create/modify files under `.github/workflows/`. Everything described
+> below is the designed and locally-verified behavior; it will be updated
+> with the actual posted comment/status once the push goes through.
+
+`.github/workflows/predict.yml` runs on every push and pull request, extracts
+the triggering commit's features live, and posts the result as a commit
+status plus (on PRs) a PR comment.
+
+**Adding it to a repo:**
+1. Copy `.github/workflows/predict.yml` and `.github/scripts/post_prediction.py`
+   into the target repo (and `extractor/`, `api/`, `scripts/`, `requirements.txt`
+   — the workflow trains the model itself on first run, see below, so it needs
+   the full pipeline, not just the two Action files).
+2. No secrets to configure — it uses the workflow's own built-in
+   `secrets.GITHUB_TOKEN`, nothing to add manually. Required permissions
+   (`contents: read`, `statuses: write`, `pull-requests: write`) are already
+   declared in the workflow file.
+3. First run on a given commit of the training scripts downloads
+   TravisTorrent and trains the model (~5–10 minutes); every run after that
+   restores the trained model from `actions/cache` in seconds, until the
+   training scripts or `requirements.txt` change.
+
+**Read this before adding it to a repo you actually merge code into:**
+- **It is advisory only, by construction.** The commit status always posts
+  `state: success` — there is no code path that posts a failing/blocking
+  status, and the job has `continue-on-error: true` besides. It cannot be
+  configured as a required check that blocks merges just by adding it; don't
+  wire it up as one.
+- **Cross-CI-system skew.** The model was trained on Travis CI outcomes
+  (2011–2016) and is applied here to GitHub Actions outcomes on today's
+  repos — a different CI system, a different era. See the
+  [feature-parity report](outputs/reports/stage3_feature_parity.md) for what
+  is and isn't comparable, feature by feature.
+- **Cold-start over-flagging on established repos.** Live history is bounded
+  by how long *Actions* has been enabled, not the repo's actual age — see
+  [Cold start](#cold-start-the-honest-version). The Action flags this
+  explicitly (`cold_start` state, and a "shallow history detected" note when
+  a repo looks old but has thin recorded history) rather than papering over it.
+- **No bare percentages.** Every comment leads with an experimental banner;
+  the raw probability, when shown at all, is visually secondary and labeled
+  low-confidence — never a headline verdict. The plain-language drivers are
+  the actual content.
+- **What "could not score" means.** If the extractor can't get enough data
+  (rate limit, API error, or the model isn't available), the Action posts
+  that plainly rather than a fabricated or zeroed prediction — see the
+  [parity report](outputs/reports/stage3_feature_parity.md)'s framing of why
+  that failure mode matters.
+
+**The deployment reality, stated plainly:** this is a working demonstration
+of a complete pipeline (train → extract → serve → annotate), not a
+calibrated tool ready to gate real merges. Making it production-trustworthy
+would require retraining on GitHub Actions outcomes directly (removing the
+cross-CI skew) or building a proper cross-CI calibration layer — neither is
+built here. Treat every number this Action posts as a demonstration that the
+pipeline works, not as ground truth about your build.
+
 ## Deviations from the original plan
 
 - **Gradient-boosting model is scikit-learn's `HistGradientBoostingClassifier`,
@@ -236,6 +311,18 @@ High."
 - **`git_diff_test_churn` is 0 for all 261,139 rows** in TravisTorrent — a
   real gap in the dataset, not a bug here. Dropped rather than kept as a
   zero-variance feature; `test_file_ratio` covers the same distinction.
+- **The GitHub Action trains the model itself (cached), rather than
+  downloading a pre-published artifact.** The trained model is gitignored
+  (never committed) and the brief didn't specify how a fresh CI checkout
+  gets one. Considered publishing it as a GitHub Release asset instead —
+  rejected because it would require a token with release-publish
+  permissions and would only work for repos that could reach *this* demo
+  repo's releases, whereas train-and-cache is self-contained and works
+  identically for anyone who copies the Action to their own repo.
+- **The Action runs the model in-process** (`api.model.PredictionService`
+  imported directly) rather than over HTTP against a running `POST
+  /predict` server — same underlying code, skips standing up a server
+  process/port/health-check inside a CI job for no benefit.
 - Full list of smaller judgment calls (temporal cutoff choice, author-history
   scoping, missing-value handling, etc.) in each stage's report under
   `outputs/reports/`.
