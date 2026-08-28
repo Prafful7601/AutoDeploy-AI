@@ -1,0 +1,363 @@
+{
+  "generated_by": "scripts/09_generate_demo_fixtures.py",
+  "examples": [
+    {
+      "id": "high_risk_streak",
+      "label": "Active failure streak",
+      "_provenance": "Hand-specified feature vector (3 consecutive prior failures, elevated project failure rate), identical to tests/test_post_prediction.py's VALID_PAYLOAD. Output is real inference from the trained model on these inputs \u2014 not a hand-typed result.",
+      "input_summary": {
+        "repo_description": "Established Ruby project, 340 prior builds",
+        "language": "ruby"
+      },
+      "features": {
+        "src_churn": 42,
+        "files_added": 1,
+        "files_deleted": 0,
+        "files_modified": 3,
+        "total_files_changed": 4,
+        "src_files_changed": 3,
+        "doc_files_changed": 0,
+        "other_files_changed": 1,
+        "tests_added": 1,
+        "tests_deleted": 0,
+        "test_file_ratio": 0.25,
+        "num_commits_in_build": 1,
+        "commits_on_touched_files": 12,
+        "previous_build_status": 1,
+        "project_prior_failure_rate": 0.35,
+        "project_prior_build_count": 340,
+        "consecutive_failure_streak": 3,
+        "author_prior_builds_in_project": 22,
+        "author_prior_failure_rate_in_project": 0.09,
+        "author_days_since_last_build_in_project": 3.5,
+        "team_size": 8,
+        "repo_age_days": 900,
+        "repo_num_commits": 4500,
+        "sloc": 32000,
+        "test_lines_per_kloc": 180,
+        "test_cases_per_kloc": 12,
+        "asserts_per_kloc": 30,
+        "is_pr": 0,
+        "by_core_team_member": 1,
+        "language": "ruby",
+        "is_main_branch": 1
+      },
+      "result": {
+        "failure_probability": 0.7931927067011978,
+        "null_history_features": [],
+        "status": "ok",
+        "probability_confidence": "normal",
+        "risk_tier": "High",
+        "risk_tier_thresholds": {
+          "low_max": 0.3,
+          "high_min": 0.6
+        },
+        "message": null,
+        "cold_start": null,
+        "top_contributors": [
+          {
+            "feature": "previous_build_status",
+            "feature_value": 1.0,
+            "shap_value": 1.3786808622365345,
+            "direction": "increases risk"
+          },
+          {
+            "feature": "consecutive_failure_streak",
+            "feature_value": 3.0,
+            "shap_value": 0.22688691763435612,
+            "direction": "increases risk"
+          },
+          {
+            "feature": "author_prior_failure_rate_in_project",
+            "feature_value": 0.09,
+            "shap_value": -0.1951950297648594,
+            "direction": "decreases risk"
+          },
+          {
+            "feature": "tests_added",
+            "feature_value": 1.0,
+            "shap_value": -0.11979478459324094,
+            "direction": "decreases risk"
+          },
+          {
+            "feature": "project_prior_failure_rate",
+            "feature_value": 0.35,
+            "shap_value": 0.10896652981041811,
+            "direction": "increases risk"
+          }
+        ],
+        "contributors_scope": "all_features"
+      }
+    },
+    {
+      "id": "low_risk_real_repo",
+      "label": "Real repo, healthy history",
+      "_provenance": "REAL live GitHub extraction \u2014 repo `spf13/cobra`, commit `adbc8813901b`, captured 2026-08-28, live, unauthenticated (60 req/hour), this development session. Every input feature came from the live GitHub API via the Stage 3 Layer 2 extractor; this is the most end-to-end-real example of the four.",
+      "input_summary": {
+        "repo_description": "spf13/cobra (real, public)",
+        "language": "go"
+      },
+      "features": {
+        "src_churn": 24,
+        "files_added": 0,
+        "files_deleted": 0,
+        "files_modified": 3,
+        "total_files_changed": 3,
+        "src_files_changed": 3,
+        "doc_files_changed": 0,
+        "other_files_changed": 0,
+        "tests_added": 0,
+        "tests_deleted": 0,
+        "test_file_ratio": 0.0,
+        "num_commits_in_build": 1,
+        "commits_on_touched_files": 55,
+        "repo_age_days": 4693,
+        "repo_num_commits": 1106,
+        "team_size": 330,
+        "language": "go",
+        "is_pr": 1,
+        "is_main_branch": 1,
+        "by_core_team_member": 1,
+        "sloc": 4549,
+        "test_lines_per_kloc": 274.59,
+        "test_cases_per_kloc": 0.0,
+        "asserts_per_kloc": 28.81,
+        "previous_build_status": 0,
+        "project_prior_failure_rate": 0.0410958904109589,
+        "project_prior_build_count": 292,
+        "consecutive_failure_streak": 0,
+        "author_prior_builds_in_project": 13,
+        "author_prior_failure_rate_in_project": 0.15384615384615385,
+        "author_days_since_last_build_in_project": 0.7765162037037037
+      },
+      "result": {
+        "failure_probability": 0.1921294273508007,
+        "null_history_features": [],
+        "status": "ok",
+        "probability_confidence": "normal",
+        "risk_tier": "Low",
+        "risk_tier_thresholds": {
+          "low_max": 0.3,
+          "high_min": 0.6
+        },
+        "message": null,
+        "cold_start": null,
+        "top_contributors": [
+          {
+            "feature": "consecutive_failure_streak",
+            "feature_value": 0.0,
+            "shap_value": -0.6026773185096742,
+            "direction": "decreases risk"
+          },
+          {
+            "feature": "previous_build_status",
+            "feature_value": 0.0,
+            "shap_value": -0.49106124079176566,
+            "direction": "decreases risk"
+          },
+          {
+            "feature": "project_prior_failure_rate",
+            "feature_value": 0.0410958904109589,
+            "shap_value": -0.3245550725073961,
+            "direction": "decreases risk"
+          },
+          {
+            "feature": "team_size",
+            "feature_value": 330.0,
+            "shap_value": 0.20630598828423702,
+            "direction": "increases risk"
+          },
+          {
+            "feature": "is_pr",
+            "feature_value": 1.0,
+            "shap_value": 0.13672861612228188,
+            "direction": "increases risk"
+          }
+        ],
+        "contributors_scope": "all_features"
+      }
+    },
+    {
+      "id": "cold_start_new_repo",
+      "label": "Brand-new repo, first build",
+      "_provenance": "Hand-specified feature vector (all 5 cold-start history fields absent, 0 prior builds), identical to tests/test_post_prediction.py's COLD_PAYLOAD. Output is real inference showing the cold_start branch of the actual trained service \u2014 not a mocked or invented state.",
+      "input_summary": {
+        "repo_description": "New Go project, no Actions history yet",
+        "language": "go"
+      },
+      "features": {
+        "src_churn": 5,
+        "files_added": 0,
+        "files_deleted": 0,
+        "files_modified": 1,
+        "total_files_changed": 1,
+        "src_files_changed": 1,
+        "doc_files_changed": 0,
+        "other_files_changed": 0,
+        "tests_added": 0,
+        "tests_deleted": 0,
+        "test_file_ratio": 0.0,
+        "num_commits_in_build": 1,
+        "commits_on_touched_files": 0,
+        "project_prior_build_count": 0,
+        "consecutive_failure_streak": 0,
+        "team_size": 3,
+        "repo_age_days": 400,
+        "repo_num_commits": 50,
+        "sloc": 3000,
+        "test_lines_per_kloc": 100,
+        "test_cases_per_kloc": 5,
+        "asserts_per_kloc": 10,
+        "is_pr": 0,
+        "by_core_team_member": 1,
+        "language": "go",
+        "is_main_branch": 1
+      },
+      "result": {
+        "failure_probability": 0.6420455690131619,
+        "null_history_features": [
+          "previous_build_status",
+          "project_prior_failure_rate",
+          "author_prior_builds_in_project",
+          "author_prior_failure_rate_in_project",
+          "author_days_since_last_build_in_project"
+        ],
+        "status": "cold_start",
+        "probability_confidence": "low",
+        "risk_tier": null,
+        "risk_tier_thresholds": null,
+        "message": "Insufficient build history for a reliable prediction; history-based scoring activates once this repo accrues builds. This repo has no build recorded before this one, and roughly two thirds of what this model keys on is prior-build history. The probability below is reported for transparency only and should not be treated as a risk tier: on a brand-new repo this model reads 'no history' as a failure signal in its own right, so it over-flags new repos as high risk. The drivers listed are the features that do have values.",
+        "cold_start": {
+          "reason": "no_prior_build_in_repo",
+          "triggered_by": [
+            "previous_build_status",
+            "project_prior_failure_rate"
+          ],
+          "history_scoring_active": false,
+          "upgrade_path": "Planned: route cold-start requests to a dedicated history-free model trained only on transferable change/process features. Expected performance is approximately the Stage 2 held-out-projects result (~0.69 PR-AUC), versus 0.804 for the history-using model on the temporal split. It would sit behind this same cold_start check."
+        },
+        "top_contributors": [
+          {
+            "feature": "consecutive_failure_streak",
+            "feature_value": 0.0,
+            "shap_value": -0.7473467540581065,
+            "direction": "decreases risk"
+          },
+          {
+            "feature": "language_go",
+            "feature_value": 1.0,
+            "shap_value": -0.28553092185997325,
+            "direction": "decreases risk"
+          },
+          {
+            "feature": "test_lines_per_kloc",
+            "feature_value": 100.0,
+            "shap_value": -0.08332596675673105,
+            "direction": "decreases risk"
+          },
+          {
+            "feature": "test_cases_per_kloc",
+            "feature_value": 5.0,
+            "shap_value": 0.06691997097383731,
+            "direction": "increases risk"
+          },
+          {
+            "feature": "repo_age_days",
+            "feature_value": 400.0,
+            "shap_value": 0.04811233017058008,
+            "direction": "increases risk"
+          }
+        ],
+        "contributors_scope": "non_null_features_only"
+      }
+    },
+    {
+      "id": "cross_ci_caveat_medium",
+      "label": "PR build, unrecognized language",
+      "_provenance": "Hand-specified feature vector (PR build, 'javascript' \u2014 not one of this model's 3 known languages, so handled as the unrecognized-language reference case; short 60-day history) \u2014 NOT backed by a live extraction: this session's unauthenticated GitHub rate limit (6/60 remaining, no token) wasn't enough left to reliably complete a second one. Output is real inference from the trained model on these inputs. Chosen to illustrate the language-coverage gap and give tier variety (Medium), not to hide the absence of a second live example.",
+      "input_summary": {
+        "repo_description": "Newer JS project, PR from a non-core contributor",
+        "language": "javascript"
+      },
+      "features": {
+        "src_churn": 180,
+        "files_added": 2,
+        "files_deleted": 1,
+        "files_modified": 6,
+        "total_files_changed": 9,
+        "src_files_changed": 7,
+        "doc_files_changed": 1,
+        "other_files_changed": 1,
+        "tests_added": 0,
+        "tests_deleted": 0,
+        "test_file_ratio": 0.0,
+        "num_commits_in_build": 1,
+        "commits_on_touched_files": 40,
+        "previous_build_status": 0,
+        "project_prior_failure_rate": 0.22,
+        "project_prior_build_count": 55,
+        "consecutive_failure_streak": 0,
+        "author_prior_builds_in_project": 4,
+        "author_prior_failure_rate_in_project": 0.25,
+        "author_days_since_last_build_in_project": 45.0,
+        "team_size": 15,
+        "repo_age_days": 60,
+        "repo_num_commits": 300,
+        "sloc": 18000,
+        "test_lines_per_kloc": 90,
+        "test_cases_per_kloc": 6,
+        "asserts_per_kloc": 15,
+        "is_pr": 1,
+        "by_core_team_member": 0,
+        "language": "javascript",
+        "is_main_branch": 0
+      },
+      "result": {
+        "failure_probability": 0.38990180347248554,
+        "null_history_features": [],
+        "status": "ok",
+        "probability_confidence": "normal",
+        "risk_tier": "Medium",
+        "risk_tier_thresholds": {
+          "low_max": 0.3,
+          "high_min": 0.6
+        },
+        "message": null,
+        "cold_start": null,
+        "top_contributors": [
+          {
+            "feature": "consecutive_failure_streak",
+            "feature_value": 0.0,
+            "shap_value": -0.5224396542634061,
+            "direction": "decreases risk"
+          },
+          {
+            "feature": "previous_build_status",
+            "feature_value": 0.0,
+            "shap_value": -0.40896709291065075,
+            "direction": "decreases risk"
+          },
+          {
+            "feature": "doc_files_changed",
+            "feature_value": 1.0,
+            "shap_value": -0.24592131925070643,
+            "direction": "decreases risk"
+          },
+          {
+            "feature": "author_days_since_last_build_in_project",
+            "feature_value": 45.0,
+            "shap_value": 0.201372787800784,
+            "direction": "increases risk"
+          },
+          {
+            "feature": "test_lines_per_kloc",
+            "feature_value": 90.0,
+            "shap_value": -0.16449233647744,
+            "direction": "decreases risk"
+          }
+        ],
+        "contributors_scope": "all_features"
+      }
+    }
+  ]
+}
