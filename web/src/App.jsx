@@ -7,6 +7,7 @@ import { ExampleSelector } from "./components/ExampleSelector";
 import { PredictionCard } from "./components/PredictionCard";
 import { LiveForm } from "./components/LiveForm";
 import { LiveModeGuide } from "./components/LiveModeGuide";
+import { ProjectCredits } from "./components/ProjectCredits";
 import { checkHealth, predictLive } from "./lib/api";
 import demoData from "./data/demoFixtures.json";
 import "./App.css";
@@ -144,6 +145,8 @@ function App() {
           </div>
         </section>
       )}
+
+      <ProjectCredits />
 
       <footer className="app__footer">
         <p>
