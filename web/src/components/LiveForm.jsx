@@ -1,29 +1,29 @@
-import { useState } from "react";
 import "./LiveForm.css";
 
 /**
  * Repo + commit SHA input for live mode. Deliberately minimal — this is a
  * demonstration input, not a production form (no repo autocomplete, no
  * SHA validation beyond non-empty).
+ *
+ * Controlled by the parent (repoInput/sha/onRepoChange/onShaChange) rather
+ * than holding its own state, so the "try an example" quick-fill buttons
+ * in LiveModeGuide can populate these fields directly — one source of
+ * truth for what's in the form, not two components racing to own it.
  */
-export function LiveForm({ onSubmit, loading }) {
-  const [repoInput, setRepoInput] = useState("spf13/cobra");
-  const [sha, setSha] = useState("");
-  const [error, setError] = useState(null);
-
+export function LiveForm({ repoInput, sha, onRepoChange, onShaChange, onSubmit, loading, error, onErrorChange }) {
   function handleSubmit(e) {
     e.preventDefault();
     const trimmedRepo = repoInput.trim();
     const trimmedSha = sha.trim();
     if (!trimmedRepo.includes("/")) {
-      setError('Repo must be in "owner/name" format.');
+      onErrorChange('Repo must be in "owner/name" format.');
       return;
     }
     if (!trimmedSha) {
-      setError("Commit SHA is required.");
+      onErrorChange("Commit SHA is required.");
       return;
     }
-    setError(null);
+    onErrorChange(null);
     const [owner, repo] = trimmedRepo.split("/");
     onSubmit({ owner, repo, sha: trimmedSha });
   }
@@ -36,7 +36,7 @@ export function LiveForm({ onSubmit, loading }) {
           id="repo-input"
           type="text"
           value={repoInput}
-          onChange={(e) => setRepoInput(e.target.value)}
+          onChange={(e) => onRepoChange(e.target.value)}
           placeholder="spf13/cobra"
         />
       </div>
@@ -46,7 +46,7 @@ export function LiveForm({ onSubmit, loading }) {
           id="sha-input"
           type="text"
           value={sha}
-          onChange={(e) => setSha(e.target.value)}
+          onChange={(e) => onShaChange(e.target.value)}
           placeholder="adbc8813901bba65827259daa8e22ff94ec1f30e"
         />
       </div>

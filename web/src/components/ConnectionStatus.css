@@ -1,0 +1,77 @@
+.connection-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  flex-wrap: wrap;
+}
+
+.connection-status__dot {
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.connection-status--live .connection-status__dot {
+  background: var(--color-low);
+  box-shadow: 0 0 0 3px var(--color-low-bg);
+}
+
+.connection-status--demo .connection-status__dot {
+  background: var(--color-text-muted);
+}
+
+.connection-status__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 180px;
+}
+
+.connection-status__text strong {
+  font-size: 13px;
+}
+
+.connection-status__url {
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+.connection-status__button {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.connection-status__button:hover:not(:disabled) {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.connection-status__button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.connection-status__result {
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.connection-status__result--ok {
+  color: var(--color-low);
+}
+
+.connection-status__result--fail {
+  color: var(--color-text-muted);
+}

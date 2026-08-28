@@ -2,19 +2,23 @@
 // (VITE_-prefixed so Vite exposes it to the client bundle) — never a
 // secret; the GitHub token stays server-side in api/main.py and is never
 // referenced anywhere in this frontend.
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+export const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
-const HEALTH_CHECK_TIMEOUT_MS = 2500;
+// The passive check on page load: short, so demo mode never makes a
+// visitor wait on a hung request before seeing a working dashboard.
+export const PASSIVE_HEALTH_CHECK_TIMEOUT_MS = 2500;
+// A manual "check connection" click is a deliberate user action, so it's
+// allowed to actually wait through a Render free-tier cold start (up to
+// ~50s) rather than give up in 2.5s like the passive check does.
+export const MANUAL_HEALTH_CHECK_TIMEOUT_MS = 60000;
 
 /**
  * Returns true if the API is reachable, false otherwise (network error,
- * non-2xx, or timeout) — never throws. A short timeout keeps the
- * demo-mode fallback feeling instant rather than making a portfolio
- * visitor wait on a hung request before seeing a working dashboard.
+ * non-2xx, or timeout) — never throws.
  */
-export async function checkHealth() {
+export async function checkHealth(timeoutMs = PASSIVE_HEALTH_CHECK_TIMEOUT_MS) {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), HEALTH_CHECK_TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const res = await fetch(`${API_BASE}/health`, { signal: controller.signal });
     return res.ok;

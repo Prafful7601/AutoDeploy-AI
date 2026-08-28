@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { CrossCiCaveat, DemoModeBanner, LiveModeBanner } from "./components/Banners";
+import { ConnectionStatus } from "./components/ConnectionStatus";
 import { HowItWorks } from "./components/HowItWorks";
 import { ModelStats } from "./components/ModelStats";
 import { ExampleSelector } from "./components/ExampleSelector";
 import { PredictionCard } from "./components/PredictionCard";
 import { LiveForm } from "./components/LiveForm";
+import { LiveModeGuide } from "./components/LiveModeGuide";
 import { checkHealth, predictLive } from "./lib/api";
 import demoData from "./data/demoFixtures.json";
 import "./App.css";
@@ -13,7 +15,9 @@ import "./App.css";
 // no API running sees a fully working dashboard immediately, with zero
 // flash of blank/loading content. If /health turns out to be reachable,
 // the effect below upgrades to "live" — the fallback is the default, live
-// is the upgrade, never the other way around.
+// is the upgrade, never the other way around. Returning the setter too
+// lets ConnectionStatus's manual "Check connection" button drive the same
+// state directly, rather than duplicating it.
 function useApiMode() {
   const [mode, setMode] = useState("demo");
   useEffect(() => {
@@ -25,7 +29,7 @@ function useApiMode() {
       cancelled = true;
     };
   }, []);
-  return mode;
+  return [mode, setMode];
 }
 
 /** Adapts a /predict-live response (or an error) into the same shape
@@ -60,11 +64,14 @@ function statusLabelFor(httpStatus) {
 }
 
 function App() {
-  const mode = useApiMode();
+  const [mode, setMode] = useApiMode();
   const examples = demoData.examples;
   const [selectedId, setSelectedId] = useState(examples[0].id);
   const selectedDemo = examples.find((e) => e.id === selectedId);
 
+  const [repoInput, setRepoInput] = useState("spf13/cobra");
+  const [shaInput, setShaInput] = useState("");
+  const [formError, setFormError] = useState(null);
   const [liveExample, setLiveExample] = useState(null);
   const [liveLoading, setLiveLoading] = useState(false);
 
@@ -74,6 +81,13 @@ function App() {
     const outcome = await predictLive(input);
     setLiveExample(toLiveExample(input, outcome));
     setLiveLoading(false);
+  }
+
+  function handleTryExample({ repo, sha }) {
+    setRepoInput(repo);
+    setShaInput(sha);
+    setFormError(null);
+    handleLiveSubmit({ owner: repo.split("/")[0], repo: repo.split("/")[1], sha });
   }
 
   return (
@@ -86,6 +100,7 @@ function App() {
       <div className="app__banners">
         <CrossCiCaveat />
         {mode === "demo" ? <DemoModeBanner /> : <LiveModeBanner />}
+        <ConnectionStatus mode={mode} onModeChange={setMode} />
       </div>
 
       <HowItWorks />
@@ -99,7 +114,17 @@ function App() {
             model this whole project is built on — nothing here is a second, simplified code
             path.
           </p>
-          <LiveForm onSubmit={handleLiveSubmit} loading={liveLoading} />
+          <LiveModeGuide onTryExample={handleTryExample} />
+          <LiveForm
+            repoInput={repoInput}
+            sha={shaInput}
+            onRepoChange={setRepoInput}
+            onShaChange={setShaInput}
+            onSubmit={handleLiveSubmit}
+            loading={liveLoading}
+            error={formError}
+            onErrorChange={setFormError}
+          />
           <div className="app__card-wrap">
             {liveLoading && <p className="app__loading">Extracting features and running the model…</p>}
             {!liveLoading && liveExample && <PredictionCard example={liveExample} />}
