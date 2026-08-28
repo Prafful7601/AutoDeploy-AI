@@ -1,0 +1,67 @@
+name: AutoDeploy AI - experimental build risk signal
+
+# Advisory only. This workflow never fails the build and is never wired up
+# as a required status check — see the "Using the Action" section of the
+# README before adding this to a repo you actually merge code into.
+on:
+  push:
+  pull_request:
+  workflow_dispatch:  # manual re-run button, useful for testing
+
+permissions:
+  contents: read
+  statuses: write        # to post the commit status
+  pull-requests: write   # to post the PR comment
+
+jobs:
+  predict:
+    runs-on: ubuntu-latest
+    # Belt-and-suspenders on top of post_prediction.py always exiting 0
+    # itself: even an infrastructure hiccup (e.g. the training data source
+    # being briefly unreachable) must not make this show as a failing
+    # workflow run, since it's advisory-only by design.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+
+      # The trained model is gitignored (Stage 2 policy: model binaries
+      # never committed). Rather than requiring a manually-published
+      # artifact somewhere, this job trains it itself and caches the
+      # result — self-contained, no extra secrets/infra needed by anyone
+      # who copies this Action to their own repo. First run on a given
+      # commit of the training scripts pays the full training cost
+      # (downloads TravisTorrent, ~5-10 min); every run after that until
+      # those scripts change restores from cache in seconds. Flagged in
+      # the Stage 3 write-up as a real architectural decision, not an
+      # afterthought.
+      - name: Cache trained model
+        id: model-cache
+        uses: actions/cache@v4
+        with:
+          path: outputs/models/hgb_split_temporal.joblib
+          key: autodeploy-model-v1-${{ hashFiles('scripts/01_fetch_data.py', 'scripts/02_prepare_dataset.py', 'scripts/03_build_features.py', 'scripts/05_train_and_evaluate.py', 'scripts/config.py', 'requirements.txt') }}
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Train model (only on a cache miss)
+        if: steps.model-cache.outputs.cache-hit != 'true'
+        continue-on-error: true  # let post_prediction.py report "could not score" honestly instead of just going red
+        run: |
+          python scripts/01_fetch_data.py
+          python scripts/02_prepare_dataset.py
+          python scripts/03_build_features.py
+          python scripts/05_train_and_evaluate.py
+
+      # Always runs, even if training above failed — post_prediction.py
+      # checks whether the model actually loaded and posts an honest
+      # "could not score" message rather than nothing at all.
+      - name: Extract features, predict, and post the result
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python .github/scripts/post_prediction.py
