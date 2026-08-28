@@ -505,3 +505,5 @@ time.
 - Full list of smaller judgment calls (temporal cutoff choice, author-history
   scoping, missing-value handling, etc.) in each stage's report under
   `outputs/reports/`.
+
+<!-- test commit: verifying the GitHub Action's PR-comment path -->
