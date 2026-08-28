@@ -103,13 +103,19 @@ function ColdStartBody({ result }) {
   );
 }
 
+const ERROR_HEADLINES = {
+  not_found: "Repo or commit not found.",
+  rate_limited: "Could not fetch enough history.",
+};
+
 function CouldNotScoreBody({ result }) {
+  const headline = ERROR_HEADLINES[result.status] || "Could not generate a signal.";
+  const showNotACodeIssueNote = result.status !== "not_found"; // a typo'd repo/SHA isn't "the code's" fault either way, but the phrasing specifically reassures about infra hiccups — doesn't fit a user-input error
   return (
     <div className="prediction-card__body">
       <p className="prediction-card__coldstart-message">
-        <strong>Could not generate a signal.</strong>{" "}
-        {result.detail || "Required data could not be retrieved this run."} This is not a
-        signal that anything is wrong with the code.
+        <strong>{headline}</strong> {result.detail || "Required data could not be retrieved this run."}
+        {showNotACodeIssueNote && " This is not a signal that anything is wrong with the code."}
       </p>
     </div>
   );

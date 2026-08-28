@@ -1,9 +1,8 @@
 # web/ — AutoDeploy AI dashboard
 
-React (Vite) frontend for Stage 4. **Demo mode only so far** — live mode
-(health check + real repo/SHA input against the backend) is a separate,
-not-yet-built phase; see the root [README](../README.md#stage-4-dashboard)
-for status.
+React (Vite) frontend for Stage 4. Both demo mode and live mode are built
+— see the root [README](../README.md#stage-4-dashboard) for the full
+status and the backend glue endpoint's contract.
 
 ## Structure
 
@@ -12,12 +11,14 @@ src/
   components/    one .jsx + co-located .css per component
   lib/            driverLabels.js — plain-language SHAP explanations (JS port
                   of .github/scripts/post_prediction.py's mapping)
+                  api.js — talks to the backend (health check + live prediction)
   data/           demoFixtures.json — real captured model outputs (see below)
   styles/         tokens.css — design tokens (colors, spacing, type)
 ```
 
 ## Run it locally
 
+Demo mode alone needs nothing but the frontend:
 ```bash
 cd web
 npm install
@@ -25,7 +26,33 @@ npm run dev      # http://localhost:5173
 npm run build    # production build to dist/
 ```
 
-No backend needs to be running for demo mode — it's fully self-contained.
+For live mode, also run the backend (see the root README's Stage 4
+section for the full two-terminal command). `VITE_API_BASE_URL` (see
+`.env.example`) points the frontend at it — defaults to
+`http://localhost:8000`.
+
+## How the demo fallback works
+
+On load, the app calls `GET /health` on the backend with a 2.5-second
+timeout (`lib/api.js`'s `checkHealth()`), and starts in demo mode by
+default — not a loading state — so there's never a flash of blank content
+while that check is in flight:
+
+- **Unreachable, times out, or errors** → stays in demo mode. This is the
+  actual fallback path, not a degraded state: same example picker, same
+  real fixture data, same "Showing sample data" banner as always. A
+  portfolio visitor with no backend running sees a fully working, honest
+  dashboard — this is the point of building demo mode first.
+- **Reachable** → upgrades to live mode: the example picker is replaced
+  by a repo/SHA input, `LiveModeBanner` replaces the demo banner, and
+  submissions go through `lib/api.js`'s `predictLive()` to the backend's
+  `POST /predict-live`.
+
+Both modes render results through the exact same `PredictionCard`
+component — a live API response is adapted (`App.jsx`'s `toLiveExample`)
+into the same shape the demo fixtures already use, including for every
+error case (repo not found, rate limited, model unavailable): each maps
+to the same "could not score" card treatment, never a fabricated result.
 
 ## The demo fixtures — how they're real, not fabricated
 
@@ -68,3 +95,7 @@ engineering artifact," not a product landing page.
    design decision in this project; worth calling out on its own.
 3. The "Real repo, healthy history" card — the one example backed by a
    genuine live GitHub extraction, worth captioning as such.
+4. Live mode with a real result — the repo/SHA input, the "Live mode —
+   connected" banner, and a real prediction rendered through the same
+   card component. Proves the whole pipeline runs live, not just against
+   bundled fixtures.
