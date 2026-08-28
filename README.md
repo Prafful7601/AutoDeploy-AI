@@ -7,18 +7,16 @@ history, project context) — and explains *why* via SHAP feature attributions.
 This is a scoped, defensible demo, not a production system. See
 [Out of scope](#out-of-scope--future-work) for what was deliberately left out.
 
-> **Status: Stage 3 nearly complete — one push blocked.** Stages 1–2
-> complete (data, features, model, SHAP). Stage 3 Layers 1 + 1b (prediction
-> API + cold-start handling) and Layer 2 (live GitHub feature extractor +
-> parity report) built, tested, and pushed. Layer 3 (advisory GitHub
-> Action) is built and passes 99 local tests, but the workflow file itself
-> (`.github/workflows/predict.yml`) has NOT yet been pushed or run live on
-> GitHub — the git credential in use lacks the `workflow` OAuth scope
-> GitHub requires for that specific file. See
-> [Using the Action](#using-the-action) for what's verified so far and
-> what's still pending. **Stage 4 (dashboard) complete** — demo mode and
-> live mode both built, tested, and screenshotted (see
-> [Stage 4: dashboard](#stage-4-dashboard)). Real numbers below, not
+> **Status: Stages 1–4 complete, including a real live Action run.**
+> Data, features, model, and SHAP (1–2); the prediction API, cold-start
+> handling, live extractor, and the GitHub Action (3) — the Action is
+> pushed and has actually run on GitHub's infrastructure against this
+> repo's own commits, posting a real commit status and a real PR comment
+> (see [Using the Action](#using-the-action) for the actual posted output,
+> not just a description of what it should do); the dashboard, demo and
+> live mode both (4). Deployment config for Render + Vercel is prepared
+> (see [Deployment](#deployment-render--vercel-both-free-tier)) — not yet
+> live, that's on the user to connect. Real numbers throughout, not
 > projections.
 
 ## Architecture: train → extract → serve → annotate
@@ -26,9 +24,12 @@ This is a scoped, defensible demo, not a production system. See
 ```
 data/          historical build records (raw + processed). Never committed.
 scripts/       data collection, feature engineering, training, evaluation
-outputs/       trained model (gitignored), evaluation figures/reports, SHAP artifacts
+outputs/       the served model (committed, ~405 KB — see Deployment), evaluation figures/reports, SHAP artifacts
 api/           FastAPI service wrapping the trained model (Stage 3, Layer 1)
-web/           React dashboard (Stage 4) — demo mode built; live mode (calling the API) not yet wired
+extractor/     live GitHub feature extraction (Stage 3, Layer 2)
+.github/       the advisory GitHub Action (Stage 3, Layer 3)
+web/           React dashboard (Stage 4) — demo mode and live mode both built
+render.yaml, web/vercel.json   deployment config (Render + Vercel) — see Deployment
 ```
 
 1. **Train** (`scripts/`) — TravisTorrent build history -> leakage-free
@@ -47,12 +48,13 @@ web/           React dashboard (Stage 4) — demo mode built; live mode (calling
    trained model: `POST /predict` returns failure probability, risk tier, and
    the SHAP-ranked features driving that specific prediction — or a
    `cold_start` state, with no tier, when the repo has no build history yet.
-4. **Annotate** (`.github/workflows/predict.yml`, Stage 3 Layer 3, code
-   done, **not yet pushed/run live** — see the status banner above) — a
-   GitHub Action that runs on every push/PR, posts the result as a commit
-   status (always advisory, never blocking) and, on PRs, a comment — plain
-   language, an experimental banner leading every post, and no bare
-   percentage as a headline. See [Using the Action](#using-the-action).
+4. **Annotate** (`.github/workflows/predict.yml`, Stage 3 Layer 3, done and
+   verified live) — a GitHub Action that runs on every push/PR, posts the
+   result as a commit status (always advisory, never blocking) and, on
+   PRs, a comment — plain language, an experimental banner leading every
+   post, and no bare percentage as a headline. Actually run on GitHub's
+   infrastructure against this repo's own commits and a real test PR —
+   see [Using the Action](#using-the-action) for the genuine posted output.
 
 Each stage/layer is committed and reviewed before the next one starts.
 
@@ -110,11 +112,18 @@ so results are reproducible run to run.
   `spf13/cobra` — a real repo with real Actions history.
 - **Stage 3, Layer 3 (GitHub Action):** `.github/workflows/predict.yml` —
   runs automatically on push/PR once added to a repo (see
-  [Using the Action](#using-the-action)); `pytest tests/test_post_prediction.py -v`
-  to test the comment-composition logic locally. **Not yet pushed to this
-  repo** (blocked — see status banner); the workflow file exists locally
-  and all 99 tests pass, but it hasn't run on GitHub's infrastructure yet.
-- **Stage 4 (web UI):** _not yet built_
+  [Using the Action](#using-the-action) for the real posted output);
+  `pytest tests/test_post_prediction.py -v` to test the comment-composition
+  logic locally. Live on this repo — every push and PR triggers a real run.
+- **Stage 4 (dashboard):**
+  ```bash
+  # backend
+  uvicorn api.main:app --reload
+  # frontend, separate terminal
+  cd web && npm install && npm run dev
+  ```
+  Demo mode needs no backend; live mode activates automatically once one's
+  reachable. See [Stage 4: dashboard](#stage-4-dashboard).
 
 ## Data source
 
@@ -240,14 +249,42 @@ High."
 
 ## Using the Action
 
-> **Current status: not yet run live.** `.github/workflows/predict.yml` and
-> `.github/scripts/post_prediction.py` are written and pass 99 local tests
-> (including structural checks on every hard requirement below), but the
-> workflow file itself hasn't been pushed to this repo yet — the git
-> credential in use here lacks the `workflow` OAuth scope GitHub requires
-> to create/modify files under `.github/workflows/`. Everything described
-> below is the designed and locally-verified behavior; it will be updated
-> with the actual posted comment/status once the push goes through.
+> **Status: live and verified**, not just designed. Once pushed, its
+> first-ever run found a real bug (see the fetch-script fix below) that no
+> amount of local testing had caught, then a follow-up run posted this
+> real commit status on a genuine commit in this repo:
+>
+> > state: `success` · context: `autodeploy-ai/experimental-signal`
+> > description: *"Experimental signal leans Low (low-confidence, cross-CI)
+> > — see PR/commit comment"*
+>
+> and this real comment body, fetched back from GitHub's API, not
+> reproduced from memory:
+>
+> > ⚠️ **Experimental, cross-CI-system signal — not validated. Do not treat
+> > this as a verdict.**
+> > Trained on Travis CI build outcomes; applied here to GitHub Actions
+> > builds — a different CI system, with known miscalibration on real
+> > repos. See the feature-parity report for exactly what is and isn't
+> > comparable. This demonstrates an end-to-end pipeline, not a production
+> > risk assessment.
+> >
+> > **What this build's history and change characteristics suggest**
+> > - no active failure streak in recent builds
+> > - the immediately preceding build in this project passed
+> > - this project's historical failure rate is on the low side (0%)
+> > - this project has 2 prior recorded build(s) in its Actions history
+> > - this author's past builds in this project have a lower failure rate (0%)
+> >
+> > *Live build history here only goes back to whenever GitHub Actions was
+> > enabled on this repo, not the repo's actual age...*
+> >
+> > <sub>Reference only, not a calibrated risk assessment — experimental,
+> > low-confidence signal leans **Low** (raw model output: 15%).</sub>
+>
+> The PR-comment path was verified the same way, against a real (since
+> closed) test PR — same banner, same plain-language drivers, same
+> de-emphasized probability line, posted by `github-actions[bot]`.
 
 `.github/workflows/predict.yml` runs on every push and pull request, extracts
 the triggering commit's features live, and posts the result as a commit
@@ -502,6 +539,19 @@ time.
   for deployment: it's 405 KB, and a gitignored model doesn't exist on a
   fresh Render checkout. See the Deployment section above for the full
   reasoning and the alternatives considered and rejected.
+- **A real reproducibility bug, caught by the Action's own first live
+  run, not by any local testing:** `scripts/01_fetch_data.py` never
+  downloaded the companion commit-metadata file (`commitlog.sqlite`,
+  Zenodo 829968) — it was fetched by hand with a one-off `curl` command
+  during Stage 1 and silently sat in `data/raw/` ever since, invisible
+  locally because the file was just always already there. The first
+  genuinely fresh checkout (GitHub's CI runner) hit
+  `sqlite3.OperationalError: no such table: commits` during training.
+  The Action behaved exactly as designed when this happened — it posted
+  the honest "could not score" state (`state: success`, still advisory,
+  never a fabricated result) rather than failing loudly or guessing.
+  Fixed in `scripts/01_fetch_data.py`; a follow-up run then succeeded and
+  produced the real output quoted above.
 - Full list of smaller judgment calls (temporal cutoff choice, author-history
   scoping, missing-value handling, etc.) in each stage's report under
   `outputs/reports/`.
