@@ -19,6 +19,7 @@ Run with: pytest tests/test_api.py -v
 import itertools
 import sys
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -439,3 +440,63 @@ class TestTierBoundaries:
     ])
     def test_boundaries(self, prob, expected):
         assert self.service.classify_risk(prob) == expected
+
+
+# =============================================================================
+# Stage 4 glue: POST /predict-live
+# =============================================================================
+
+class TestPredictLive:
+    """Reuses Layer 1/2 directly — no second model/extraction code path.
+    Real-network tests skip cleanly on rate limit; the error-path tests
+    that don't need real data are mocked so they're always exercised."""
+
+    def test_real_repo_returns_valid_prediction(self):
+        _requires_model()
+        r = client.post("/predict-live", json={
+            "owner": "spf13", "repo": "cobra",
+            "sha": "adbc8813901bba65827259daa8e22ff94ec1f30e", "branch": "main",
+        })
+        if r.status_code == 429:
+            pytest.skip("GitHub API rate limit hit — not a test failure.")
+        assert r.status_code == 200, r.text
+        body = r.json()
+        assert body["status"] in ("ok", "cold_start")
+        assert "features" in body and "feature_provenance" in body
+        assert len(body["features"]) == 31
+
+    def test_nonexistent_repo_returns_404_not_a_fake_prediction(self):
+        r = client.post("/predict-live", json={
+            "owner": "spf13", "repo": "this-repo-does-not-exist-xyz123", "sha": "deadbeef",
+        })
+        if r.status_code == 429:
+            pytest.skip("GitHub API rate limit hit before reaching the 404 check — not a test failure.")
+        assert r.status_code == 404
+        assert "failure_probability" not in r.json()
+        assert "check the owner/name and sha" in r.json()["detail"].lower()
+
+    def test_missing_required_field_is_422(self):
+        r = client.post("/predict-live", json={"owner": "spf13", "repo": "cobra"})  # no sha
+        assert r.status_code == 422
+
+    def test_rate_limit_returns_429_not_a_fabricated_result(self):
+        with patch("api.main.build_feature_vector") as mock_extract:
+            from extractor.github_client import GitHubRateLimitError
+            mock_extract.side_effect = GitHubRateLimitError(9999999999)
+            r = client.post("/predict-live", json={"owner": "a", "repo": "b", "sha": "c"})
+        assert r.status_code == 429
+        assert "rate limit" in r.json()["detail"].lower()
+        assert "failure_probability" not in r.json()
+
+    def test_model_not_loaded_returns_503(self):
+        with patch("api.main.build_feature_vector") as mock_extract, \
+             patch("api.main.service") as mock_service:
+            mock_extract.return_value = type("R", (), {"features": {}, "provenance": {}})()
+            mock_service.is_loaded = False
+            mock_service.load_error = "Model artifact not found."
+            r = client.post("/predict-live", json={"owner": "a", "repo": "b", "sha": "c"})
+        assert r.status_code == 503
+
+    def test_cors_headers_present_for_frontend_origin(self):
+        r = client.get("/health", headers={"Origin": "http://localhost:5173"})
+        assert r.headers.get("access-control-allow-origin") == "http://localhost:5173"
